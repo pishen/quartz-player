@@ -1,38 +1,60 @@
 package controllers
 
-import akka.util.Timeout
 import akka.actor.Props
 import akka.pattern.ask
 import play.api.mvc.Action
 import play.api.mvc.Controller
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
-import us.theatr.akka.quartz._
+import akka.util.Timeout
+import akka.actor.ActorRef
+import scala.xml.Elem
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
+  implicit val ec = concurrent.ExecutionContext.Implicits.global
   //actors
-  val quartz = Akka.system.actorOf(Props[QuartzActor])
-  val job = Akka.system.actorOf(Props[Job])
+  val handler = Akka.system.actorOf(Props[JobHandler])
 
-  def index = Action {
-    Ok(views.html.index())
+  def index = Action.async {
+    (handler ? ListJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
   }
-  
-  def add = Action { request =>
-    println("add")
-    //val jobName = request.getQueryString("job-name").get
-    val email = request.getQueryString("email").get
-    val cmd = request.getQueryString("cmd").get
-    val cron = request.getQueryString("cron").get
-    quartz ? AddCronSchedule(job, cron, Run(cmd, email), true)
+
+  def add = Action(parse.tolerantJson) { request =>
+    val json = request.body
+    val id = (json \ "jobId").as[String]
+    val email = (json \ "email").as[String]
+    val cmd = (json \ "cmd").as[String]
+    val cron = (json \ "cron").as[String]
+
+    handler ! AddJob(id, email, cmd, cron)
     Ok("added")
   }
-  
-  def cancel = Action {request =>
-    
-    
-    Ok("canceled")
+
+  def job = Action.async { request =>
+    val id = request.getQueryString("id").get
+    (handler ? GetJob(id)).mapTo[ActorRef].flatMap(job => {
+      (job ? JobDetail).mapTo[Elem].map(detail => Ok(views.html.job(id, detail)))
+    })
+  }
+
+  def remove = Action(parse.tolerantJson) { request =>
+    val json = request.body
+    val id = (json \ "jobId").as[String]
+    handler ! RemoveJob(id)
+    Ok("removed")
+  }
+
+  def state = Action { request =>
+    ???
+  }
+
+  def detail = Action { request =>
+    ???
+  }
+
+  def output = Action { request =>
+    ???
   }
 
 }
