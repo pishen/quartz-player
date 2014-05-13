@@ -27,7 +27,8 @@ object Application extends Controller {
     val cmd = (json \ "cmd").as[String]
     val cron = (json \ "cron").as[String]
 
-    handler ! AddJob(id, email, cmd, cron)
+    if(!id.contains(" ")) handler ! AddJob(id, email, cmd, cron)
+    
     Ok("added")
   }
 
