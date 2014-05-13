@@ -23,8 +23,8 @@ class Job(id: String,
 
   Resource.fromWriter(new FileWriter(jobDir + "/script")).write(cmd)
 
-  def outputFile = new File(execDir + "/output")
-  def resultFile = new File(execDir + "/result")
+  def outputFile = execDir + "/output"
+  def stateFile = execDir + "/exit-value"
 
   def receive = {
     case JobState => sender ! (if (running) "running" else "sleeping")
@@ -38,28 +38,34 @@ class Job(id: String,
         </ul>
       sender ! detail
     }
-    case LastOutput => sender ! Resource.fromFile(outputFile).lines().toSeq
+    case History => {
+      val history = new File(jobDir).listFiles()
+        .filter(_.isDirectory()).map(h => <li>{ h.getName() }</li>)
+      sender ! <ul>{ history }</ul>
+    }
     case RunJob => {
       if (!running) {
         //start new execution
         execDir = jobDir + "/" + new SimpleDateFormat("MMdd-HHmmss").format(new Date())
         new File(execDir).mkdir()
-        val newProcess = "sh script" run ProcessLogger(outputFile)
+        val script = jobDir + "/script"
+        val newProcess = Seq("sh", script) run ProcessLogger(line => Resource.fromFile(outputFile).write(line + "\n"))
         process = newProcess
         future {
           blocking {
-            val res = newProcess.exitValue
-            self ! Finish(res)
+            val state = newProcess.exitValue
+            self ! Finish(state)
           }
         }
         running = true
       }
     }
-    case Finish(res) => {
+    case Finish(state) => {
       //change state to sleeping
       running = false
-      //log result into file
-      Resource.fromWriter(new FileWriter(resultFile)).write(res.toString)
+      //log exit value
+      Resource.fromWriter(new FileWriter(stateFile)).write(state.toString)
+      //TODO check if it's killed, success, or error, and decide whether to send email
       //send email
       val output = Resource.fromFile(outputFile).lines().mkString("\n")
       val content = "The result of your command is:\n\n" + output
@@ -71,7 +77,7 @@ class Job(id: String,
 
 case object JobState
 case object JobDetail
-case object LastOutput
+case object History
 case object RunJob
 case class Finish(res: Int)
 case object KillJob

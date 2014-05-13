@@ -34,7 +34,12 @@ object Application extends Controller {
   def job = Action.async { request =>
     val id = request.getQueryString("id").get
     (handler ? GetJob(id)).mapTo[ActorRef].flatMap(job => {
-      (job ? JobDetail).mapTo[Elem].map(detail => Ok(views.html.job(id, detail)))
+      for{
+        detail <- (job ? JobDetail).mapTo[Elem]
+        history <- (job ? History).mapTo[Elem]
+      } yield {
+        Ok(views.html.job(id, detail, history))
+      }
     })
   }
 
