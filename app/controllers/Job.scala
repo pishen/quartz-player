@@ -8,6 +8,7 @@ import java.io.File
 import concurrent.{ future, blocking }
 import java.text.SimpleDateFormat
 import java.util.Date
+import play.api.libs.json.Json
 
 class Job(conf: JobConfig) extends Actor {
   implicit val ec = Application.ec
@@ -78,6 +79,8 @@ class Job(conf: JobConfig) extends Actor {
 case class JobConfig(id: String, email: String, cmd: String, cron: String){
   //TODO validate config if needed
   require(id.replaceAll("\\w", "") == "")
+  
+  def toJsObject = Json.obj("id" -> id, "email" -> email, "cmd" -> cmd, "cron" -> cron)
 }
 
 case object JobState

@@ -15,6 +15,9 @@ import scala.concurrent.Await
 import akka.actor.PoisonPill
 import play.api.libs.json.JsValue
 import us.theatr.akka.quartz.AddCronScheduleFailure
+import play.api.libs.json.Json
+import scalax.io.Resource
+import java.io.FileWriter
 
 class JobHandler extends Actor {
   implicit val timeout = Timeout(1000)
@@ -24,7 +27,7 @@ class JobHandler extends Actor {
 
   val quartz = context.actorOf(Props[QuartzActor])
 
-  var jobMap = Map.empty[String, (ActorRef, Cancellable)]
+  var jobMap = Map.empty[String, (ActorRef, Cancellable, JobConfig)]
 
   def receive = {
     case AddJob(conf, rewrite) => {
@@ -36,10 +39,12 @@ class JobHandler extends Actor {
         val f = (quartz ? AddCronSchedule(job, conf.cron, RunJob, true))
         Await.result(f, timeout.duration) match {
           case AddCronScheduleSuccess(cancellable) => {
-            jobMap += (conf.id -> (job, cancellable))
+            jobMap += (conf.id -> (job, cancellable, conf))
             //TODO rewrite jobs.json
             if(rewrite){
-              
+              Resource.fromWriter(new FileWriter(Application.jobsJson)).write{
+                Json.prettyPrint(Json.obj("jobs" -> jobMap.values.map(_._3.toJsObject)))
+              }
             }
           }
           case AddCronScheduleFailure => job ! PoisonPill
@@ -49,7 +54,7 @@ class JobHandler extends Actor {
     }
     case RemoveJob(id) => {
       if (jobMap.contains(id)) {
-        val (job, cancellable) = jobMap(id)
+        val (job, cancellable, conf) = jobMap(id)
         quartz ! us.theatr.akka.quartz.RemoveJob(cancellable)
         job ! PoisonPill
         jobMap -= id

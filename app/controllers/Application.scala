@@ -42,6 +42,7 @@ object Application extends Controller {
     handler ! AddJob(JobConfig(id, email, cmd, cron), rewrite)
   }
   //load from jobs.json
+  //TODO catch exception and log here
   (Json.parse(Resource.fromFile(jobsJson).string) \ "jobs").as[Seq[JsObject]].map(json => addJob(json, false))
 
   def index = Action.async {
