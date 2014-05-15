@@ -40,12 +40,8 @@ class JobHandler extends Actor {
         Await.result(f, timeout.duration) match {
           case AddCronScheduleSuccess(cancellable) => {
             jobMap += (conf.id -> (job, cancellable, conf))
-            //TODO rewrite jobs.json
-            if(rewrite){
-              Resource.fromWriter(new FileWriter(Application.jobsJson)).write{
-                Json.prettyPrint(Json.obj("jobs" -> jobMap.values.map(_._3.toJsObject)))
-              }
-            }
+            //rewrite jobs.json
+            if (rewrite) rewriteJson()
           }
           case AddCronScheduleFailure => job ! PoisonPill
           case _ => //
@@ -58,6 +54,8 @@ class JobHandler extends Actor {
         quartz ! us.theatr.akka.quartz.RemoveJob(cancellable)
         job ! PoisonPill
         jobMap -= id
+        //rewrite jobs.json
+        rewriteJson()
       }
     }
     case GetJob(id) => {
@@ -71,6 +69,9 @@ class JobHandler extends Actor {
     }
   }
 
+  private def rewriteJson() = Resource.fromWriter(new FileWriter(Application.jobsJson)).write {
+    Json.prettyPrint(Json.obj("jobs" -> jobMap.values.map(_._3.toJsObject)))
+  }
 }
 
 case class AddJob(conf: JobConfig, rewrite: Boolean)
