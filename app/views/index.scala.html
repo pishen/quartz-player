@@ -18,13 +18,13 @@
 	<form id="new-job-form" class="pure-form pure-form-stacked">
 		<fieldset>
 			<label>Job id</label>
-			<input id="job-id" placeholder="job-id" required>
+			<input id="job-id" placeholder="job-id">
 			<label>Email</label>
-			<input id="email" type="email" placeholder="email" required>
+			<input id="email" type="email" placeholder="email">
 			<label>Command to execute (ex. "hadoop fs -ls /")</label>
-			<input id="cmd" placeholder="hadoop fs -ls /" required>
+			<input id="cmd" placeholder="hadoop fs -ls /" size="50">
 			<label><a href="http://quartz-scheduler.org/api/2.1.0/org/quartz/CronExpression.html" target="_blank">Cron expression</a></label>
-			<input id="cron" placeholder="0 0/1 * * * ?" required>
+			<input id="cron" placeholder="0 0/1 * * * ?">
 			<a id="submit-job" class="pure-button pure-button-primary">Submit</a>
 		</fieldset>
 	</form>

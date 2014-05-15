@@ -65,6 +65,8 @@ class Job(conf: JobConfig) extends Actor {
       //log exit value
       Resource.fromWriter(new FileWriter(exitValFile)).write(exitVal.toString)
       //TODO check if it's killed, success, or error, and decide whether to send email
+      //result email to check the exec result
+      //error email to send when exitVal != 0
       val output = Resource.fromFile(outputFile).lines().mkString("\n")
       val content = "The result of your command is:\n\n" + output
       (Seq("echo", content) #| Seq("mail", "-s", "From Akka Quartz", conf.email)).!

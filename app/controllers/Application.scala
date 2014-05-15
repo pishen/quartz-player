@@ -14,6 +14,8 @@ import play.api.libs.json.JsValue
 import scalax.io.Resource
 import play.api.libs.json.Json
 import play.api.libs.json.JsObject
+import java.io.File
+import java.io.FileWriter
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
@@ -28,6 +30,7 @@ object Application extends Controller {
   
   //files
   val jobsJson = "jobs.json"
+  if(! new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{jobs:[]}")
   
   //load current jobs
   private def addJob(json: JsValue, rewrite: Boolean) = {
