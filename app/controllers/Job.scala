@@ -78,7 +78,7 @@ class Job(conf: JobConfig) extends Actor {
 
 case class JobConfig(id: String, email: String, cmd: String, cron: String){
   //TODO validate config if needed
-  require(id.replaceAll("\\w", "") == "")
+  require(id.replaceAll("[\\w-]", "") == "")
   
   def toJsObject = Json.obj("id" -> id, "email" -> email, "cmd" -> cmd, "cron" -> cron)
 }
