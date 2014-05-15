@@ -16,49 +16,58 @@ import play.api.libs.json.Json
 import play.api.libs.json.JsObject
 import java.io.File
 import java.io.FileWriter
+import play.api.data.Form
+import play.api.data.Forms._
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
   implicit val ec = concurrent.ExecutionContext.Implicits.global
-  
+
   //actors
   val handler = Akka.system.actorOf(Props[JobHandler])
-  
+
   //create folder
   val jobsDir = "jobs"
   Seq("mkdir", jobsDir).!
-  
+
   //files
   val jobsJson = "jobs.json"
-  if(! new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{\"jobs\":[]}")
-  
-  //load current jobs
-  private def addJob(json: JsValue, rewrite: Boolean) = {
+  if (!new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{\"jobs\":[]}")
+
+  //load from jobs.json
+  //TODO catch exception and log here
+  (Json.parse(Resource.fromFile(jobsJson).string) \ "jobs").as[Seq[JsObject]].foreach(json => {
     val id = (json \ "id").as[String]
     val email = (json \ "email").as[String]
     val cmd = (json \ "cmd").as[String]
     val cron = (json \ "cron").as[String]
+    val errorOnly = (json \ "errorOnly").as[Boolean]
 
-    handler ! AddJob(JobConfig(id, email, cmd, cron), rewrite)
-  }
-  //load from jobs.json
-  //TODO catch exception and log here
-  (Json.parse(Resource.fromFile(jobsJson).string) \ "jobs").as[Seq[JsObject]].map(json => addJob(json, false))
+    handler ! AddJob(JobConfig(id, email, cmd, cron, errorOnly), false)    
+  })
 
   def index = Action.async {
     (handler ? ListJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
   }
 
-  def add = Action(parse.tolerantJson) { request =>
-    val json = request.body
-    addJob(json, true)
-    Ok("added")
+  //handle form submit
+  val jobConfigForm = Form(mapping(
+    "id" -> nonEmptyText,
+    "email" -> email,
+    "cmd" -> nonEmptyText,
+    "cron" -> nonEmptyText,
+    "error-only" -> boolean)(JobConfig.apply)(JobConfig.unapply))
+
+  def add = Action { implicit request =>
+    handler ! AddJob(jobConfigForm.bindFromRequest.get, true)
+    Redirect("/")
   }
 
+  //
   def job = Action.async { request =>
     val id = request.getQueryString("id").get
     (handler ? GetJob(id)).mapTo[ActorRef].flatMap(job => {
-      for{
+      for {
         detail <- (job ? JobDetail).mapTo[Elem]
         history <- (job ? History).mapTo[Elem]
       } yield {
@@ -85,7 +94,5 @@ object Application extends Controller {
   def output = Action { request =>
     ???
   }
-  
-  
 
 }
