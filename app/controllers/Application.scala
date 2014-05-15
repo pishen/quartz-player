@@ -30,7 +30,7 @@ object Application extends Controller {
   
   //files
   val jobsJson = "jobs.json"
-  if(! new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{jobs:[]}")
+  if(! new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{\"jobs\":[]}")
   
   //load current jobs
   private def addJob(json: JsValue, rewrite: Boolean) = {
