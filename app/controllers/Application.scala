@@ -9,12 +9,37 @@ import play.api.libs.concurrent.Akka
 import akka.util.Timeout
 import akka.actor.ActorRef
 import scala.xml.Elem
+import sys.process._
+import play.api.libs.json.JsValue
+import scalax.io.Resource
+import play.api.libs.json.Json
+import play.api.libs.json.JsObject
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
   implicit val ec = concurrent.ExecutionContext.Implicits.global
+  
   //actors
   val handler = Akka.system.actorOf(Props[JobHandler])
+  
+  //create folder
+  val jobsDir = "jobs"
+  Seq("mkdir", jobsDir).!
+  
+  //files
+  val jobsJson = "jobs.json"
+  
+  //load current jobs
+  private def addJob(json: JsValue, rewrite: Boolean) = {
+    val id = (json \ "id").as[String]
+    val email = (json \ "email").as[String]
+    val cmd = (json \ "cmd").as[String]
+    val cron = (json \ "cron").as[String]
+
+    handler ! AddJob(JobConfig(id, email, cmd, cron), rewrite)
+  }
+  //load from jobs.json
+  (Json.parse(Resource.fromFile(jobsJson).string) \ "jobs").as[Seq[JsObject]].map(json => addJob(json, false))
 
   def index = Action.async {
     (handler ? ListJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
@@ -22,13 +47,7 @@ object Application extends Controller {
 
   def add = Action(parse.tolerantJson) { request =>
     val json = request.body
-    val id = (json \ "jobId").as[String]
-    val email = (json \ "email").as[String]
-    val cmd = (json \ "cmd").as[String]
-    val cron = (json \ "cron").as[String]
-
-    if(!id.contains(" ")) handler ! AddJob(id, email, cmd, cron)
-    
+    addJob(json, true)
     Ok("added")
   }
 
@@ -62,5 +81,7 @@ object Application extends Controller {
   def output = Action { request =>
     ???
   }
+  
+  
 
 }

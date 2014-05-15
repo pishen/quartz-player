@@ -1,7 +1,7 @@
 $(document).ready(function() {
 	$("#submit-job").click(function() {
 		var req = {
-			jobId: $("#job-id").val(), 
+			id: $("#job-id").val(), 
 			email: $("#email").val(),
 			cmd: $("#cmd").val(),
 			cron: $("#cron").val()

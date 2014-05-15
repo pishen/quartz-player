@@ -13,33 +13,37 @@ import us.theatr.akka.quartz.AddCronScheduleSuccess
 import akka.actor.Cancellable
 import scala.concurrent.Await
 import akka.actor.PoisonPill
+import play.api.libs.json.JsValue
+import us.theatr.akka.quartz.AddCronScheduleFailure
 
 class JobHandler extends Actor {
-  implicit val timeout = Application.timeout
+  implicit val timeout = Timeout(1000)
   implicit val ec = Application.ec
-  //create folder
-  val jobsDir = "jobs"
-  Seq("mkdir", jobsDir).!
 
-  def getJobDir(id: String) = jobsDir + "/" + id
+  def jobDir(id: String) = Application.jobsDir + "/" + id
 
   val quartz = context.actorOf(Props[QuartzActor])
 
   var jobMap = Map.empty[String, (ActorRef, Cancellable)]
 
   def receive = {
-    case add: AddJob => {
-      if (!jobMap.contains(add.id)) {
-        Seq("mkdir", getJobDir(add.id)).!
+    case AddJob(conf, rewrite) => {
+      if (!jobMap.contains(conf.id)) {
+        Seq("mkdir", jobDir(conf.id)).!
 
-        val job = context.actorOf(Props(classOf[Job], add.id, add.email, add.cmd, add.cron, getJobDir(add.id)))
+        val job = context.actorOf(Props(classOf[Job], conf))
 
-        val f = (quartz ? AddCronSchedule(job, add.cron, RunJob, true))
+        val f = (quartz ? AddCronSchedule(job, conf.cron, RunJob, true))
         Await.result(f, timeout.duration) match {
           case AddCronScheduleSuccess(cancellable) => {
-            jobMap += (add.id -> (job, cancellable))
+            jobMap += (conf.id -> (job, cancellable))
+            //TODO rewrite jobs.json
+            if(rewrite){
+              
+            }
           }
-          case _ => //failed
+          case AddCronScheduleFailure => job ! PoisonPill
+          case _ => //
         }
       }
     }
@@ -61,9 +65,10 @@ class JobHandler extends Actor {
       sender ! <ul id="jobs">{ list }</ul>
     }
   }
+
 }
 
-case class AddJob(id: String, email: String, cmd: String, cron: String)
+case class AddJob(conf: JobConfig, rewrite: Boolean)
 case class RemoveJob(id: String)
 case class GetJob(id: String)
 case object ListJobs
