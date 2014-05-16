@@ -37,7 +37,8 @@ class Job(conf: JobConfig) extends Actor {
       sender ! detail
     }
     case History => {
-      val history = new File(jobDir).listFiles().map(h => <li>{ h.getName() }</li>)
+      val history = new File(jobDir).listFiles().map(_.getName()).sorted.reverse
+        .map(name => <li>{ name }</li>)
       sender ! <ul>{ history }</ul>
     }
     case RunJob => {
