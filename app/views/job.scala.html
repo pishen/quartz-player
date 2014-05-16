@@ -1,4 +1,4 @@
-@(id: String, detail: xml.Elem, history: xml.Elem)
+@(id: String, detail: xml.Elem, executions: xml.Elem)
 
 <!DOCTYPE html>
 
@@ -14,8 +14,8 @@
 	<h3 id="job-id">@id</h3>
 	@detail
 	<button id="remove" class="pure-button pure-button-primary">Remove</button>
-	<h3>history</h3>
-	@history
+	<h3>executions</h3>
+	@executions
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
 	<script src="assets/javascripts/job.js"></script>
 </body>

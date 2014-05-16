@@ -1,31 +1,31 @@
 package controllers
 
-import akka.actor.Actor
-import scalax.io.Resource
-import java.io.FileWriter
-import sys.process._
 import java.io.File
-import concurrent.{ future, blocking }
 import java.text.SimpleDateFormat
 import java.util.Date
+
+import scala.Array.canBuildFrom
+
+import akka.actor.Actor
+import akka.actor.Props
+import akka.actor.actorRef2Scala
 import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 class Job(conf: JobConfig) extends Actor {
   implicit val ec = Application.ec
+  
+  //create folder
+  Application.createDir(conf.jobDir)
 
-  val jobDir = Application.jobsDir + "/" + conf.id
-
-  var running = false
-  var lastExec = ""
-  var process: Process = null
-
-  def execDir = jobDir + "/" + lastExec
-  def outputFile = execDir + "/output"
-  def exitValFile = execDir + "/exit-value"
+  var executions = new File(conf.jobDir).listFiles().filter(_.isDirectory())
+    .map(execDir => {
+      val execId = execDir.getName()
+      execId -> context.actorOf(Props(classOf[Execution], execId, conf))
+    }).toMap
 
   def receive = {
-    case JobState => sender ! (if (running) "running" else "sleeping")
-    case JobDetail => {
+    case GetJobDetail => {
       val detail =
         <ul>
           <li>id: { conf.id }</li>
@@ -36,67 +36,36 @@ class Job(conf: JobConfig) extends Actor {
         </ul>
       sender ! detail
     }
-    case History => {
-      val history = new File(jobDir).listFiles().map(_.getName()).sorted.reverse
-        .map(name => <li>{ name }</li>)
-      sender ! <ul>{ history }</ul>
+    case GetExecutions => {
+      val lis = executions.keys.toSeq.sorted.reverse.map(exec => <li>{ exec }</li>)
+      sender ! <ul>{ lis }</ul>
     }
-    case RunJob => {
-      if (!running) {
-        //start new execution
-        lastExec = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(new Date())
-        new File(execDir).mkdir()
-
-        val newProcess = Seq("sh", "-c", conf.cmd)
-          .run(ProcessLogger(line => Resource.fromFile(outputFile).write(line + "\n")))
-        process = newProcess
-        future {
-          blocking {
-            val exitVal = newProcess.exitValue
-            self ! Finish(exitVal)
-          }
-        }
-        running = true
-      } else {
-        //TODO log a failed exec
-
+    case StartNewExec => {
+      //start new execution
+      val execId = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(new Date())
+      val newExec = context.actorOf(Props(classOf[Execution], execId, conf))
+      executions += (execId -> newExec)
+      newExec ! StartExec
+      //clean old execs
+      if(executions.size > 10){
+        val oldest = executions.keys.min
+        val oldestExec = executions(oldest)
+        executions -= oldest
+        oldestExec ! Clean
       }
     }
-    case Finish(exitVal) => {
-      //change state to sleeping
-      running = false
-      //log exit value
-      Resource.fromWriter(new FileWriter(exitValFile)).write(exitVal.toString)
-
-      //send email
-      val output = Resource.fromFile(outputFile).lines().mkString("\n")
-      val content = "The output is included below:\n\n" + output
-      if (exitVal != 0) {
-        //error
-        sendMail("[KKQuartz] ERROR in job " + conf.id, content)
-      } else if (!conf.errorOnly) {
-        //result
-        sendMail("[KKQuartz] Finished job: " + conf.id, content)
-      }
-    }
-    case KillJob => process.destroy
-  }
-
-  def sendMail(subject: String, content: String) = {
-    (Seq("echo", content) #| Seq("mail", "-s", subject, conf.email)).!
   }
 }
 
 case class JobConfig(id: String, email: String, cmd: String, cron: String, errorOnly: Boolean) {
   //TODO validate config if needed
   require(id.replaceAll("[\\w-]", "") == "")
+  
+  def jobDir = Application.jobsDir + "/" + id
 
   def toJsObject = Json.obj("id" -> id, "email" -> email, "cmd" -> cmd, "cron" -> cron, "errorOnly" -> errorOnly)
 }
 
-case object JobState
-case object JobDetail
-case object History
-case object RunJob
-case class Finish(exitVal: Int)
-case object KillJob
+case object StartNewExec
+case object GetJobDetail
+case object GetExecutions

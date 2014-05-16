@@ -18,6 +18,7 @@ import java.io.File
 import java.io.FileWriter
 import play.api.data.Form
 import play.api.data.Forms._
+import scalax.file.Path
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
@@ -27,8 +28,9 @@ object Application extends Controller {
   val handler = Akka.system.actorOf(Props[JobHandler])
 
   //create folder
+  def createDir(path: String) = Path(path).createDirectory(failIfExists = false)
   val jobsDir = "jobs"
-  Seq("mkdir", jobsDir).!
+  createDir(jobsDir)
 
   //files
   val jobsJson = "jobs.json"
@@ -66,14 +68,13 @@ object Application extends Controller {
   //
   def job = Action.async { request =>
     val id = request.getQueryString("id").get
-    (handler ? GetJob(id)).mapTo[ActorRef].flatMap(job => {
-      for {
-        detail <- (job ? JobDetail).mapTo[Elem]
-        history <- (job ? History).mapTo[Elem]
-      } yield {
-        Ok(views.html.job(id, detail, history))
-      }
-    })
+    for {
+      job <- (handler ? GetJob(id)).mapTo[ActorRef]
+      detail <- (job ? GetJobDetail).mapTo[Elem]
+      executions <- (job ? GetExecutions).mapTo[Elem]
+    } yield {
+      Ok(views.html.job(id, detail, executions))
+    }
   }
 
   def remove = Action(parse.tolerantJson) { request =>

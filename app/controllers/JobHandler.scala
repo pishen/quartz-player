@@ -23,8 +23,6 @@ class JobHandler extends Actor {
   implicit val timeout = Timeout(1000)
   implicit val ec = Application.ec
 
-  def jobDir(id: String) = Application.jobsDir + "/" + id
-
   val quartz = context.actorOf(Props[QuartzActor])
 
   var jobMap = Map.empty[String, (ActorRef, Cancellable, JobConfig)]
@@ -32,11 +30,9 @@ class JobHandler extends Actor {
   def receive = {
     case AddJob(conf, rewrite) => {
       if (!jobMap.contains(conf.id)) {
-        Seq("mkdir", jobDir(conf.id)).!
-
         val job = context.actorOf(Props(classOf[Job], conf))
 
-        val f = (quartz ? AddCronSchedule(job, conf.cron, RunJob, true))
+        val f = (quartz ? AddCronSchedule(job, conf.cron, StartNewExec, true))
         Await.result(f, timeout.duration) match {
           case AddCronScheduleSuccess(cancellable) => {
             jobMap += (conf.id -> (job, cancellable, conf))
