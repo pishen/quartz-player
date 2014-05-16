@@ -28,7 +28,10 @@ object Application extends Controller {
   val handler = Akka.system.actorOf(Props[JobHandler])
 
   //create folder
-  def createDir(path: String) = Path(path).createDirectory(failIfExists = false)
+  def createDir(dir: String) = {
+    val f = new File(dir)
+    if(!f.exists()) f.mkdir()
+  }
   val jobsDir = "jobs"
   createDir(jobsDir)
 
