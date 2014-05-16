@@ -10,7 +10,6 @@ import scala.sys.process.stringSeqToProcess
 
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import scalax.file.Path
 import scalax.io.Resource
 
 class Execution(execId: String, conf: JobConfig) extends Actor {
@@ -66,7 +65,7 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
 
     }
     case Clean => {
-      Path(execDir).deleteRecursively()
+      Seq("rm", "-r", execDir).!
       context.stop(self)
     }
   }

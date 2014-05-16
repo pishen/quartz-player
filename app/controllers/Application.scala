@@ -18,7 +18,6 @@ import java.io.File
 import java.io.FileWriter
 import play.api.data.Form
 import play.api.data.Forms._
-import scalax.file.Path
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
