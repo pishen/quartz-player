@@ -85,6 +85,19 @@ object Application extends Controller {
     handler ! RemoveJob(id)
     Ok("removed")
   }
+  
+  //
+  def exec = Action.async { request => 
+    val jobId = request.getQueryString("id").get
+    val execId = request.getQueryString("exec").get
+    for{
+      job <- (handler ? GetJob(jobId)).mapTo[ActorRef]
+      exec <- (job ? GetExec(execId)).mapTo[ActorRef]
+      output <- (exec ? GetOutput).mapTo[String]
+    } yield {
+      Ok(views.html.exec(jobId, execId, output))
+    }
+  }
 
   def state = Action { request =>
     ???

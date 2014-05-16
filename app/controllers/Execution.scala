@@ -59,10 +59,10 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
       }
     }
     case GetState => {
-
+      ???
     }
     case GetOutput => {
-
+      sender ! Resource.fromFile(outputFile).lines().mkString("\n")
     }
     case Clean => {
       Seq("rm", "-r", execDir).!

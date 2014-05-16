@@ -5,6 +5,7 @@
 # Home page
 GET     /                           controllers.Application.index
 GET     /job                        controllers.Application.job
+GET     /exec                       controllers.Application.exec
 POST    /add                        controllers.Application.add
 POST    /remove                     controllers.Application.remove
 
