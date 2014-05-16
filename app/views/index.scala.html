@@ -28,7 +28,8 @@
 		
 		
 		<a href="http://quartz-scheduler.org/api/2.1.0/org/quartz/CronExpression.html" target="_blank">Cron expression</a>
-		<input name="cron" required>
+		(ex. "0/15 * * * * ?" for every 15 seconds)
+		<input name="cron" type="text" required>
 		
 		<label class="pure-checkbox">
 			<input name="error-only" type="checkbox" value="true" checked> Only send email when error (exit value != 0)
