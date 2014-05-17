@@ -21,7 +21,7 @@ class Job(conf: JobConfig) extends Actor {
   var executions = new File(conf.jobDir).listFiles().filter(_.isDirectory())
     .map(execDir => {
       val execId = execDir.getName()
-      execId -> context.actorOf(Props(classOf[Execution], execId, conf))
+      execId -> context.actorOf(Props(classOf[Execution], execId, conf), execId)
     }).toMap
 
   def receive = {
@@ -42,10 +42,10 @@ class Job(conf: JobConfig) extends Actor {
       })
       sender ! <ul>{ lis }</ul>
     }
-    case StartNewExec => {
+    case StartNewExec(date) => {
       //start new execution
-      val execId = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(new Date())
-      val newExec = context.actorOf(Props(classOf[Execution], execId, conf))
+      val execId = new SimpleDateFormat("yyyy-MM-dd-HH:mm:ss").format(date)
+      val newExec = context.actorOf(Props(classOf[Execution], execId, conf), execId)
       executions += (execId -> newExec)
       newExec ! StartExec
       //clean old execs
@@ -74,7 +74,7 @@ case class JobConfig(id: String, email: String, cmd: String, cron: String, error
   def toJsObject = Json.obj("id" -> id, "email" -> email, "cmd" -> cmd, "cron" -> cron, "errorOnly" -> errorOnly)
 }
 
-case object StartNewExec
+case class StartNewExec(date: Date)
 case object GetJobDetail
 case object GetExecutions
 case class GetExec(id: String)

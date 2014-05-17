@@ -18,13 +18,11 @@ import java.io.File
 import java.io.FileWriter
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.Logger
 
 object Application extends Controller {
   implicit val timeout = Timeout(5000)
   implicit val ec = concurrent.ExecutionContext.Implicits.global
-
-  //actors
-  val handler = Akka.system.actorOf(Props[JobHandler])
 
   //create folder
   def createDir(dir: String) = {
@@ -37,21 +35,12 @@ object Application extends Controller {
   //files
   val jobsJson = "jobs.json"
   if (!new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{\"jobs\":[]}")
-
-  //load from jobs.json
-  //TODO catch exception and log here
-  (Json.parse(Resource.fromFile(jobsJson).string) \ "jobs").as[Seq[JsObject]].foreach(json => {
-    val id = (json \ "id").as[String]
-    val email = (json \ "email").as[String]
-    val cmd = (json \ "cmd").as[String]
-    val cron = (json \ "cron").as[String]
-    val errorOnly = (json \ "errorOnly").as[Boolean]
-
-    handler ! AddJob(JobConfig(id, email, cmd, cron, errorOnly), false)    
-  })
+  
+  //actors
+  val handler = Akka.system.actorOf(Props[JobHandler])
 
   def index = Action.async {
-    (handler ? ListJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
+    (handler ? GetJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
   }
 
   //handle form submit
