@@ -37,7 +37,7 @@ object Application extends Controller {
   if (!new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{\"jobs\":[]}")
   
   //actors
-  val handler = Akka.system.actorOf(Props[JobHandler])
+  val handler = Akka.system.actorOf(Props[JobHandler], "handler")
 
   def index = Action.async {
     (handler ? GetJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
