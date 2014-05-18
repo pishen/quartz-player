@@ -28,11 +28,7 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
   var process: Process = null
 
   override def postStop() {
-    if (running) {
-      process.destroy
-      Logger.info(concatName + " killed")
-      finishExec(process.exitValue)
-    }
+    killIfRunning()
   }
 
   def receive = {
@@ -51,7 +47,7 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
         running = true
       }
     }
-    case KillExec => process.destroy
+    case KillExec => killIfRunning()
     case Finish(exitVal) => {
       if (running) {
         //change state to sleeping
@@ -66,11 +62,21 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
       sender ! Resource.fromFile(outputFile).lines().mkString("\n")
     }
     case Clean => {
+      killIfRunning()
       Seq("rm", "-r", execDir).!
       context.stop(self)
     }
     case AddWaitingExec(waiting) => {
       ???
+    }
+  }
+  
+  def killIfRunning() = {
+    if(running) {
+      process.destroy
+      Logger.info(concatName + " killed")
+      running = false
+      finishExec(-1)
     }
   }
 
