@@ -11,6 +11,7 @@ import akka.actor.actorRef2Scala
 import scalax.io.Resource
 import akka.actor.ActorRef
 import play.api.Logger
+import java.io.File
 
 class Execution(execId: String, conf: JobConfig) extends Actor {
   implicit val ec = Application.ec
@@ -18,7 +19,7 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
   val execDir = conf.jobDir + "/" + execId
   val outputFile = execDir + "/output"
   val exitValFile = execDir + "/exit-value"
-  
+
   val concatName = conf.id + "/" + execId
 
   //create folder
@@ -56,7 +57,19 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
       }
     }
     case GetState => {
-      ???
+      if (running) {
+        sender ! <strong style="color:#006600">Running</strong>
+      } else {
+        if (new File(exitValFile).exists()) {
+          if (Resource.fromFile(exitValFile).lines().head.toInt != 0) {
+            sender ! <strong style="color:red">Error</strong>
+          } else {
+            sender ! <span style="color:#006600">Finished</span>
+          }
+        } else {
+          sender ! <span>Initializing</span>
+        }
+      }
     }
     case GetOutput => {
       sender ! Resource.fromFile(outputFile).lines().mkString("\n")
@@ -70,9 +83,9 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
       ???
     }
   }
-  
+
   def killIfRunning() = {
-    if(running) {
+    if (running) {
       process.destroy
       Logger.info(concatName + " killed")
       running = false

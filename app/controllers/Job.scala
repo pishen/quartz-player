@@ -3,16 +3,20 @@ package controllers
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
-
 import scala.Array.canBuildFrom
-
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.actorRef2Scala
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import akka.pattern.ask
+import akka.pattern.pipe
+import akka.util.Timeout
+import scala.xml.Elem
+import scala.concurrent.Future
 
 class Job(conf: JobConfig) extends Actor {
+  implicit val timeout = Timeout(5000)
   implicit val ec = Application.ec
 
   //create folder
@@ -37,10 +41,13 @@ class Job(conf: JobConfig) extends Actor {
       sender ! detail
     }
     case GetExecutions => {
-      val lis = executions.keys.toSeq.sorted.reverse.map(exec => {
-        <li><a href={ "exec?id=" + conf.id + "&exec=" + exec }>{ exec }</a></li>
-      })
-      sender ! <ul>{ lis }</ul>
+      val execElems = executions.toSeq.sortBy(_._1).reverse.map {
+        case (execId, actor) =>
+          (actor ? GetState).mapTo[Elem].map(state => {
+            <li><a href={ "exec?id=" + conf.id + "&exec=" + execId }>{ execId }</a> { state }</li>
+          })
+      }
+      Future.sequence(execElems).map(elems => <ul>{ elems }</ul>) pipeTo sender
     }
     case StartNewExec(date) => {
       //start new execution
