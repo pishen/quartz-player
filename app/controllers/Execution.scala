@@ -111,7 +111,11 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
   }
 
   def sendMail(subject: String, content: String) = {
-    (Seq("echo", content) #| Seq("mail", "-s", subject, conf.email)).!
+    try {
+      (Seq("echo", content) #| Seq("mail", "-s", subject, conf.email)).!
+    } catch {
+      case e: RuntimeException => Logger.error("Cannot send email")
+    }
   }
 }
 
