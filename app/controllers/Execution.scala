@@ -61,7 +61,8 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
         sender ! <strong style="color:#006600">Running</strong>
       } else {
         if (new File(exitValFile).exists()) {
-          if (Resource.fromFile(exitValFile).lines().head.toInt != 0) {
+          val exitVal = Resource.fromFile(exitValFile).lines().head.toInt
+          if (exitVal != 0) {
             sender ! <strong style="color:red">Error</strong>
           } else {
             sender ! <span style="color:#006600">Finished</span>
