@@ -56,7 +56,7 @@ class Job(conf: JobConfig) extends Actor {
       executions += (execId -> newExec)
       newExec ! StartExec
       //clean old execs
-      if (executions.size > 10) {
+      if (executions.size > 50) {
         val oldest = executions.keys.min
         val oldestExec = executions(oldest)
         executions -= oldest
