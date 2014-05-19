@@ -14,7 +14,7 @@
 </head>
 <body>
 	<h1><a href="/">KKQuartz</a></h1>
-	<h3>Current jobs:</h3>
+	<h3>Scheduled jobs:</h3>
 	@jobs
 	<h3>Create new job:</h3>
 	<form id="add-job-form" action="add" class="pure-form pure-form-stacked" method="POST">	
@@ -24,9 +24,8 @@
 		Email
 		<input name="email" type="email" required>
 		
-		Command to execute (ex. "hadoop fs -ls /")
+		Command to execute (ex. "ssh -i myhome/xxx.pem user@@server 'command'")
 		<input name="cmd" size="50" required>
-		
 		
 		<a href="http://quartz-scheduler.org/api/2.1.0/org/quartz/CronExpression.html" target="_blank">Cron expression</a>
 		(ex. "0/15 * * * * ?" for every 15 seconds)
@@ -38,6 +37,7 @@
 		
 		<button type="submit" class="pure-button pure-button-primary">Submit</button>
 	</form>
+	<h3><a href="adhoc">Ad-hoc test</a></h3>
 </body>
 </html>
 

@@ -27,7 +27,7 @@ object Application extends Controller {
   //create folder
   def createDir(dir: String) = {
     val f = new File(dir)
-    if(!f.exists()) f.mkdir()
+    if (!f.exists()) f.mkdir()
   }
   val jobsDir = "jobs"
   createDir(jobsDir)
@@ -35,9 +35,10 @@ object Application extends Controller {
   //files
   val jobsJson = "jobs.json"
   if (!new File(jobsJson).exists()) Resource.fromWriter(new FileWriter(jobsJson)).write("{\"jobs\":[]}")
-  
+
   //actors
   val handler = Akka.system.actorOf(Props[JobHandler], "handler")
+  val adhocActor = Akka.system.actorOf(Props[Adhoc], "adhoc")
 
   def index = Action.async {
     (handler ? GetJobs).mapTo[Elem].map(jobs => Ok(views.html.index(jobs)))
@@ -74,12 +75,12 @@ object Application extends Controller {
     handler ! RemoveJob(id)
     Ok("removed")
   }
-  
+
   //
-  def exec = Action.async { request => 
+  def exec = Action.async { request =>
     val jobId = request.getQueryString("id").get
     val execId = request.getQueryString("exec").get
-    for{
+    for {
       job <- (handler ? GetJob(jobId)).mapTo[ActorRef]
       exec <- (job ? GetExec(execId)).mapTo[ActorRef]
       output <- (exec ? GetOutput).mapTo[String]
@@ -88,6 +89,38 @@ object Application extends Controller {
     }
   }
 
+  //adhoc
+  def adhoc = Action.async { request =>
+    for {
+      cmd <- (adhocActor ? GetAdhocCmd).mapTo[String]
+      state <- (adhocActor ? GetState).mapTo[String]
+      output <- (adhocActor ? GetOutput).mapTo[String]
+    } yield {
+      state match {
+        case "running" =>
+          Ok(views.html.adhoc(cmd, <strong style="color:#006600">Running</strong>, output, true))
+        case "error" =>
+          Ok(views.html.adhoc(cmd, <strong style="color:red">Error</strong>, output, false))
+        case "finished" =>
+          Ok(views.html.adhoc(cmd, <span style="color:#006600">Finished</span>, output, false))
+        case _ =>
+          Ok(views.html.adhoc(cmd, <span></span>, output, false))
+      }
+    }
+  }
+
+  val runAdhocForm = Form(mapping("cmd" -> nonEmptyText)(RunAdhoc.apply)(RunAdhoc.unapply))
+  def runAdhoc = Action { implicit request =>
+    adhocActor ! runAdhocForm.bindFromRequest.get
+    Redirect("/adhoc")
+  }
+
+  def killAdhoc = Action {
+    adhocActor ! KillAdhoc
+    Redirect("/adhoc")
+  }
+
+  //
   def state = Action { request =>
     ???
   }

@@ -6,8 +6,11 @@
 GET     /                           controllers.Application.index
 GET     /job                        controllers.Application.job
 GET     /exec                       controllers.Application.exec
+GET     /adhoc                      controllers.Application.adhoc
 POST    /add                        controllers.Application.add
 POST    /remove                     controllers.Application.remove
+POST    /run-adhoc                  controllers.Application.runAdhoc
+POST    /kill-adhoc                 controllers.Application.killAdhoc
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
