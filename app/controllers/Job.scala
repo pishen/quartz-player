@@ -3,20 +3,23 @@ package controllers
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
+
 import scala.Array.canBuildFrom
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.xml.Elem
+
 import akka.actor.Actor
 import akka.actor.Props
 import akka.actor.actorRef2Scala
-import play.api.libs.json.Json
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import akka.pattern.ask
 import akka.pattern.pipe
 import akka.util.Timeout
-import scala.xml.Elem
-import scala.concurrent.Future
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 class Job(conf: JobConfig) extends Actor {
-  implicit val timeout = Timeout(5000)
+  implicit val timeout = Timeout(5.seconds)
   implicit val ec = Application.ec
 
   //create folder
@@ -31,13 +34,31 @@ class Job(conf: JobConfig) extends Actor {
   def receive = {
     case GetJobDetail => {
       val detail =
-        <ul>
-          <li>id: { conf.id }</li>
-          <li>email: { conf.email }</li>
-          <li>cmd: { conf.cmd }</li>
-          <li>cron: { conf.cron }</li>
-          <li>errorOnly: { conf.errorOnly }</li>
-        </ul>
+        <form action="update" class="pure-form pure-form-stacked" method="POST">
+          <fieldset>            
+            <input name="id" type="text" pattern="[\w-]+" value={ conf.id } hidden="hidden"/>
+            <label>Email</label>
+            <input name="email" type="email" value={ conf.email } required="required" readonly="readonly"/>
+            <label>Command</label>
+            <input name="cmd" size="50" value={ conf.cmd } required="required" readonly="readonly"/>
+            <label>
+              <a href="http://quartz-scheduler.org/api/2.1.0/org/quartz/CronExpression.html" target="_blank">Cron expression</a>
+            </label>
+            <input name="cron" type="text" value={ conf.cron } required="required" readonly="readonly"/>
+            <label class="pure-checkbox">
+              {
+                if (conf.errorOnly) {
+                  <input name="error-only" type="checkbox" value="true" checked="checked" disabled="disabled"/>
+                } else {
+                  <input name="error-only" type="checkbox" value="true" disabled="disabled"/>
+                }
+              }
+              Only send email when error
+            </label>
+            <button type="submit" class="pure-button pure-button-primary" hidden="hidden">Update</button>
+          </fieldset>
+        </form>
+
       sender ! detail
     }
     case GetExecutions => {

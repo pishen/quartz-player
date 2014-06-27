@@ -8,6 +8,7 @@ GET     /job                        controllers.Application.job
 GET     /exec                       controllers.Application.exec
 GET     /adhoc                      controllers.Application.adhoc
 POST    /add                        controllers.Application.add
+POST    /update                     controllers.Application.update
 POST    /remove                     controllers.Application.remove
 POST    /run-adhoc                  controllers.Application.runAdhoc
 POST    /kill-adhoc                 controllers.Application.killAdhoc

@@ -1,3 +1,8 @@
 body {
 	margin: 0 20px;
 }
+
+.button-red {
+	color: white;
+	background: rgb(202, 60, 60);
+}

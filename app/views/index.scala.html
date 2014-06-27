@@ -5,12 +5,9 @@
 <html>
 <head>
 <title>KKQuartz</title>
-<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.4.2/base-min.css">
 <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.4.2/pure-min.css">
 <link rel="stylesheet" href="assets/stylesheets/main.css">
 <link rel="shortcut icon" type="image/png" href="assets/images/quartz.png">
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
-<script src="assets/javascripts/main.js"></script>
 </head>
 <body>
 	<h1><a href="/">KKQuartz</a></h1>
@@ -24,7 +21,7 @@
 		Email
 		<input name="email" type="email" required>
 		
-		Command to execute (ex. "ssh -i myhome/xxx.pem user@@server 'command'")
+		Command (ex. "ssh -i myhome/xxx.pem user@@server 'command'")
 		<input name="cmd" size="50" required>
 		
 		<a href="http://quartz-scheduler.org/api/2.1.0/org/quartz/CronExpression.html" target="_blank">Cron expression</a>
@@ -35,9 +32,12 @@
 			<input name="error-only" type="checkbox" value="true" checked> Only send email when error (exit value != 0)
 		</label>
 		
-		<button type="submit" class="pure-button pure-button-primary">Submit</button>
+		<button type="submit" class="pure-button pure-button-primary">Create</button>
 	</form>
 	<h3><a href="adhoc">Ad-hoc test</a></h3>
+	
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+	<script src="assets/javascripts/main.js"></script>
 </body>
 </html>
 

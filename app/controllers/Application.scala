@@ -19,9 +19,10 @@ import java.io.FileWriter
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.Logger
+import scala.concurrent.duration.DurationInt
 
 object Application extends Controller {
-  implicit val timeout = Timeout(5000)
+  implicit val timeout = Timeout(5.seconds)
   implicit val ec = concurrent.ExecutionContext.Implicits.global
 
   //create folder
@@ -53,8 +54,14 @@ object Application extends Controller {
     "error-only" -> boolean)(JobConfig.apply)(JobConfig.unapply))
 
   def add = Action { implicit request =>
-    handler ! AddJob(jobConfigForm.bindFromRequest.get, true)
+    handler ! AddJob(jobConfigForm.bindFromRequest.get)
     Redirect("/")
+  }
+  
+  def update = Action { implicit request => 
+    val jobConf = jobConfigForm.bindFromRequest.get
+    handler ! UpdateJob(jobConf)
+    Redirect("/job", Map("id" -> Seq(jobConf.id)))
   }
 
   //
