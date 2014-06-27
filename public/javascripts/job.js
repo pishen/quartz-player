@@ -7,11 +7,14 @@ $(document).ready(function() {
 		$("form input").prop("disabled", false)
 	})
 	$("#remove").click(function() {
-		var req = {
-			jobId : $("#job-id").text()
+		var confirmed = confirm("Are you sure you want to remove this job?")
+		if (confirmed) {
+			var req = {
+				jobId : $("#job-id").text()
+			}
+			$.post("/remove", JSON.stringify(req), function() {
+				window.location.pathname = "/"
+			})
 		}
-		$.post("/remove", JSON.stringify(req), function() {
-			window.location.pathname = "/"
-		})
 	})
 })
