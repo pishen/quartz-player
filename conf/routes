@@ -7,6 +7,8 @@ GET     /                           controllers.Application.index
 GET     /job                        controllers.Application.job
 GET     /exec                       controllers.Application.exec
 GET     /adhoc                      controllers.Application.adhoc
+GET     /login                      controllers.Application.login
+GET     /openIDCallback             controllers.Application.openIDCallback
 POST    /add                        controllers.Application.add
 POST    /update                     controllers.Application.update
 POST    /remove                     controllers.Application.remove

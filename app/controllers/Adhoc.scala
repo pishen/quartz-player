@@ -1,17 +1,18 @@
 package controllers
 
+import java.io.File
 import java.io.FileWriter
+
+import scala.concurrent.Future
 import scala.concurrent.blocking
-import scala.concurrent.future
 import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
 import scala.sys.process.stringSeqToProcess
+
 import akka.actor.Actor
 import akka.actor.actorRef2Scala
-import scalax.io.Resource
-import akka.actor.ActorRef
 import play.api.Logger
-import java.io.File
+import scalax.io.Resource
 
 class Adhoc extends Actor {
   implicit val ec = Application.ec
@@ -42,7 +43,7 @@ class Adhoc extends Actor {
         val logger = ProcessLogger(line => Resource.fromFile(outputFile).write(line + "\n"))
         val newProcess = Seq("sh", "-c", cmd) run logger
         process = newProcess
-        future {
+        Future {
           blocking {
             val exitVal = newProcess.exitValue
             self ! Finish(exitVal)

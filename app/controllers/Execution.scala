@@ -1,17 +1,19 @@
 package controllers
 
+import java.io.File
 import java.io.FileWriter
+
+import scala.concurrent.Future
 import scala.concurrent.blocking
-import scala.concurrent.future
 import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
 import scala.sys.process.stringSeqToProcess
+
 import akka.actor.Actor
-import akka.actor.actorRef2Scala
-import scalax.io.Resource
 import akka.actor.ActorRef
+import akka.actor.actorRef2Scala
 import play.api.Logger
-import java.io.File
+import scalax.io.Resource
 
 class Execution(execId: String, conf: JobConfig) extends Actor {
   implicit val ec = Application.ec
@@ -39,7 +41,7 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
         val logger = ProcessLogger(line => Resource.fromFile(outputFile).write(line + "\n"))
         val newProcess = Seq("sh", "-c", conf.cmd) run logger
         process = newProcess
-        future {
+        Future {
           blocking {
             val exitVal = newProcess.exitValue
             self ! Finish(exitVal)
@@ -103,10 +105,10 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
     val content = "The output is included below:\n\n" + output
     if (exitVal != 0) {
       //error
-      sendMail("[KKQuartz] ERROR in job " + conf.id, content)
+      sendMail("[Quartz] ERROR in job " + conf.id, content)
     } else if (!conf.errorOnly) {
       //result
-      sendMail("[KKQuartz] Finished job: " + conf.id, content)
+      sendMail("[Quartz] Finished job: " + conf.id, content)
     }
   }
 

@@ -1,16 +1,10 @@
-@(jobs: xml.Elem)
+@(user: String, jobs: xml.Elem)
 
-<!DOCTYPE html>
+@scripts = {
+	<script src="assets/javascripts/main.js"></script>
+}
 
-<html>
-<head>
-<title>Play with Quartz</title>
-<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.4.2/pure-min.css">
-<link rel="stylesheet" href="assets/stylesheets/main.css">
-<link rel="shortcut icon" type="image/png" href="assets/images/quartz.png">
-</head>
-<body>
-	<h1><a href="/">Play with Quartz</a></h1>
+@main(user, scripts){
 	<h3>Scheduled jobs:</h3>
 	@jobs
 	<h3>Create new job:</h3>
@@ -35,11 +29,7 @@
 		<button type="submit" class="pure-button pure-button-primary">Create</button>
 	</form>
 	<h3><a href="adhoc">Ad-hoc test</a></h3>
-	
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
-	<script src="assets/javascripts/main.js"></script>
-</body>
-</html>
+}
 
 
 
