@@ -1,17 +1,14 @@
-@(redirectURL: String)
+@(authInfo: xml.Elem)
 
-<!DOCTYPE html>
-
-<html>
-<head>
-<title>Play with Quartz</title>
-<link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.4.2/pure-min.css">
-<link rel="shortcut icon" type="image/png" href="assets/images/quartz.png">
-</head>
-<body>
-<a href="@redirectURL" class="pure-button pure-button-primary" style="margin-left:20px;margin-top:20px">Login with Google OpenID</a>
-</body>
-</html>
+@main(authInfo){
+	<form action="loginPost" class="pure-form" method="POST">
+    	<fieldset>
+        	<input name="email" type="email" placeholder="Email" required>
+        	<input name="password" type="password" placeholder="Password" required>
+        	<button type="submit" class="pure-button pure-button-primary">Log in</button>
+    	</fieldset>
+	</form>
+}
 
 
 

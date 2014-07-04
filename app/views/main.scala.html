@@ -1,17 +1,17 @@
-@(user: String, scripts: Html = Html(""))(content: Html)
+@(authInfo: xml.Elem, scripts: Html = Html(""))(content: Html)
 
 <!DOCTYPE html>
 
 <html>
 <head>
-<title>Play with Quartz</title>
+<title>Quartz Player</title>
 <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.4.2/pure-min.css">
 <link rel="stylesheet" href="assets/stylesheets/main.css">
 <link rel="shortcut icon" type="image/png" href="assets/images/quartz.png">
 </head>
 <body>
-	<h1><a href="/">Play with Quartz</a></h1>
-	<p>logged in as: @user</p>
+	<h1><a href="/">Quartz Player</a></h1>
+	@authInfo
 	@content
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
 	@scripts

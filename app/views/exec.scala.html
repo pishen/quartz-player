@@ -1,6 +1,6 @@
-@(user: String, id: String, exec: String, output: String)
+@(authInfo: xml.Elem, id: String, exec: String, output: String)
 
-@main(user){
+@main(authInfo){
 	<h3><a href="job?id=@id">@id</a>/@exec</h3>
 	<pre>@output</pre>
 }

@@ -1,6 +1,6 @@
-@(user: String, cmd: String, state: xml.Elem, output: String, running: Boolean)
+@(authInfo: xml.Elem, cmd: String, state: xml.Elem, output: String, running: Boolean)
 
-@main(user){
+@main(authInfo){
 	<h3>Ad-hoc test</h3>
 	@if(!running){
 		<form action="run-adhoc" class="pure-form" method="POST">

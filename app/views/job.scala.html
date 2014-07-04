@@ -1,10 +1,10 @@
-@(user: String, id: String, detail: xml.Elem, executions: xml.Elem)
+@(authInfo: xml.Elem, id: String, detail: xml.Elem, executions: xml.Elem)
 
 @scripts = {
 	<script src="assets/javascripts/job.js"></script>
 }
 
-@main(user, scripts){
+@main(authInfo, scripts){
 	<h3 id="job-id">@id</h3>
 	@detail
 	<button id="edit" class="pure-button pure-button-primary">Edit</button>

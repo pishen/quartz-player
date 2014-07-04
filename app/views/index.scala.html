@@ -1,10 +1,10 @@
-@(user: String, jobs: xml.Elem)
+@(authInfo: xml.Elem, jobs: xml.Elem)
 
 @scripts = {
 	<script src="assets/javascripts/main.js"></script>
 }
 
-@main(user, scripts){
+@main(authInfo, scripts){
 	<h3>Scheduled jobs:</h3>
 	@jobs
 	<h3>Create new job:</h3>

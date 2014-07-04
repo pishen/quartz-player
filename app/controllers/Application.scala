@@ -22,7 +22,8 @@ import play.api.Logger
 import scala.concurrent.duration.DurationInt
 import play.api.libs.openid.OpenID
 import scala.concurrent.Future
-
+import play.api.mvc.Security.AuthenticatedBuilder
+import play.api.libs.ws.WS
 
 object Application extends Controller {
   implicit val timeout = Timeout(5.seconds)
@@ -44,25 +45,51 @@ object Application extends Controller {
   val handler = Akka.system.actorOf(Props[JobHandler], "handler")
   val adhocActor = Akka.system.actorOf(Props[Adhoc], "adhoc")
 
-  def login = Action.async { implicit request =>
-    OpenID.redirectURL("https://www.google.com/accounts/o8/id",
-      routes.Application.openIDCallback.absoluteURL())
-      .map(url => Ok(views.html.login(url)))
-  }
+  //authentication
+  object AjaxAction extends AuthenticatedBuilder(
+    request => request.session.get("user"),
+    _ => Unauthorized("Please login"))
 
-  def openIDCallback = Action.async { implicit request =>
-    OpenID.verifiedId.map(info => {
-      Redirect("/").withSession("user" -> info.id)
-    })
-  }
+  object UserAction extends AuthenticatedBuilder[String](
+    request => request.session.get("user"),
+    _ => Redirect("/login"))
 
-  val loginRedirect = Future { Redirect("/login") }
+  def authInfo(email: String) = <div>Logged in as: { email } <a href="/logout">Logout</a></div>
 
-  def index = Action.async { request =>
-    request.session.get("user") match {
-      case None => loginRedirect
-      case Some(user) => (handler ? GetJobs).mapTo[Elem].map(jobs => Ok(views.html.index(user, jobs)))
+  def login = Action { request =>
+    if (request.session.get("user").isEmpty) {
+      Ok(views.html.login(<div>Please log in</div>))
+    } else {
+      Redirect("/")
     }
+  }
+
+  case class UserInfo(email: String, password: String)
+  val userForm = Form(mapping(
+    "email" -> email,
+    "password" -> nonEmptyText)(UserInfo.apply)(UserInfo.unapply))
+  val authUrl = Resource.fromFile("auth-url").lines().head
+
+  def loginPost = Action.async { implicit request =>
+    val userInfo = userForm.bindFromRequest.get
+    WS.url(authUrl).post(Map("acc" -> Seq(userInfo.email), "pwd" -> Seq(userInfo.password))).map {
+      response =>
+        println(response.body)
+        if ((response.json \ "sid").asOpt[String].nonEmpty) {
+          Redirect("/").withSession("user" -> userInfo.email)
+        } else {
+          Unauthorized("Email or password is wrong.")
+        }
+    }
+  }
+  
+  def logout = Action {
+    Redirect("/login").withNewSession
+  }
+  ////
+
+  def index = UserAction.async { request =>
+    (handler ? GetJobs).mapTo[Elem].map(jobs => Ok(views.html.index(authInfo(request.user), jobs)))
   }
 
   //handle form submit
@@ -73,112 +100,75 @@ object Application extends Controller {
     "cron" -> nonEmptyText,
     "error-only" -> boolean)(JobConfig.apply)(JobConfig.unapply))
 
-  def add = Action { implicit request =>
-    if (request.session.get("user").nonEmpty) {
-      handler ! AddJob(jobConfigForm.bindFromRequest.get)
-      Redirect("/")
-    } else {
-      Unauthorized("Who are you?")
-    }
-
+  def add = AjaxAction { implicit request =>
+    handler ! AddJob(jobConfigForm.bindFromRequest.get)
+    Redirect("/")
   }
 
-  def update = Action { implicit request =>
-    if (request.session.get("user").nonEmpty) {
-      val jobConf = jobConfigForm.bindFromRequest.get
-      handler ! UpdateJob(jobConf)
-      Redirect("/job", Map("id" -> Seq(jobConf.id)))
-    } else {
-      Unauthorized("Who are you?")
-    }
+  def update = AjaxAction { implicit request =>
+    val jobConf = jobConfigForm.bindFromRequest.get
+    handler ! UpdateJob(jobConf)
+    Redirect("/job", Map("id" -> Seq(jobConf.id)))
   }
 
   //
-  def job = Action.async { request =>
-    request.session.get("user") match {
-      case None => loginRedirect
-      case Some(user) => {
-        val id = request.getQueryString("id").get
-        for {
-          job <- (handler ? GetJob(id)).mapTo[ActorRef]
-          detail <- (job ? GetJobDetail).mapTo[Elem]
-          executions <- (job ? GetExecutions).mapTo[Elem]
-        } yield {
-          Ok(views.html.job(user, id, detail, executions))
-        }
-      }
+  def job = UserAction.async { request =>
+    val id = request.getQueryString("id").get
+    for {
+      job <- (handler ? GetJob(id)).mapTo[ActorRef]
+      detail <- (job ? GetJobDetail).mapTo[Elem]
+      executions <- (job ? GetExecutions).mapTo[Elem]
+    } yield {
+      Ok(views.html.job(authInfo(request.user), id, detail, executions))
     }
   }
 
-  def remove = Action(parse.tolerantJson) { request =>
-    if (request.session.get("user").nonEmpty) {
-      val json = request.body
-      val id = (json \ "jobId").as[String]
-      handler ! RemoveJob(id)
-      Ok("removed")
-    } else {
-      Unauthorized("Who are you?")
-    }
+  def remove = AjaxAction(parse.tolerantJson) { request =>
+    val json = request.body
+    val id = (json \ "jobId").as[String]
+    handler ! RemoveJob(id)
+    Ok("removed")
   }
 
   //
-  def exec = Action.async { request =>
-    request.session.get("user") match {
-      case None => loginRedirect
-      case Some(user) => {
-        val jobId = request.getQueryString("id").get
-        val execId = request.getQueryString("exec").get
-        for {
-          job <- (handler ? GetJob(jobId)).mapTo[ActorRef]
-          exec <- (job ? GetExec(execId)).mapTo[ActorRef]
-          output <- (exec ? GetOutput).mapTo[String]
-        } yield {
-          Ok(views.html.exec(user, jobId, execId, output))
-        }
-      }
+  def exec = UserAction.async { request =>
+    val jobId = request.getQueryString("id").get
+    val execId = request.getQueryString("exec").get
+    for {
+      job <- (handler ? GetJob(jobId)).mapTo[ActorRef]
+      exec <- (job ? GetExec(execId)).mapTo[ActorRef]
+      output <- (exec ? GetOutput).mapTo[String]
+    } yield {
+      Ok(views.html.exec(authInfo(request.user), jobId, execId, output))
     }
   }
 
   //adhoc
-  def adhoc = Action.async { request =>
-    request.session.get("user") match {
-      case None => loginRedirect
-      case Some(user) => {
-        for {
-          cmd <- (adhocActor ? GetAdhocCmd).mapTo[String]
-          state <- (adhocActor ? GetState).mapTo[String]
-          output <- (adhocActor ? GetOutput).mapTo[String]
-        } yield {
-          val (stateElem, running) = state match {
-            case "running" => (<strong style="color:#006600">Running</strong>, true)
-            case "error" => (<strong style="color:red">Error</strong>, false)
-            case "finished" => (<span style="color:#006600">Finished</span>, false)
-            case _ => (<span></span>, false)
-          }
-          Ok(views.html.adhoc(user, cmd, stateElem, output, running))
-        }
+  def adhoc = UserAction.async { request =>
+    for {
+      cmd <- (adhocActor ? GetAdhocCmd).mapTo[String]
+      state <- (adhocActor ? GetState).mapTo[String]
+      output <- (adhocActor ? GetOutput).mapTo[String]
+    } yield {
+      val (stateElem, running) = state match {
+        case "running" => (<strong style="color:#006600">Running</strong>, true)
+        case "error" => (<strong style="color:red">Error</strong>, false)
+        case "finished" => (<span style="color:#006600">Finished</span>, false)
+        case _ => (<span></span>, false)
       }
+      Ok(views.html.adhoc(authInfo(request.user), cmd, stateElem, output, running))
     }
-
   }
 
   val runAdhocForm = Form(mapping("cmd" -> nonEmptyText)(RunAdhoc.apply)(RunAdhoc.unapply))
-  def runAdhoc = Action { implicit request =>
-    if (request.session.get("user").nonEmpty) {
-      adhocActor ! runAdhocForm.bindFromRequest.get
-      Redirect("/adhoc")
-    } else {
-      Unauthorized("Who are you?")
-    }
+  def runAdhoc = AjaxAction { implicit request =>
+    adhocActor ! runAdhocForm.bindFromRequest.get
+    Redirect("/adhoc")
   }
 
-  def killAdhoc = Action { request =>
-    if (request.session.get("user").nonEmpty) {
-      adhocActor ! KillAdhoc
-      Redirect("/adhoc")
-    } else {
-      Unauthorized("Who are you?")
-    }
+  def killAdhoc = AjaxAction { request =>
+    adhocActor ! KillAdhoc
+    Redirect("/adhoc")
   }
 
   //

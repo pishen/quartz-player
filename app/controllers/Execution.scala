@@ -105,10 +105,10 @@ class Execution(execId: String, conf: JobConfig) extends Actor {
     val content = "The output is included below:\n\n" + output
     if (exitVal != 0) {
       //error
-      sendMail("[Quartz] ERROR in job " + conf.id, content)
+      sendMail("[Quartz Player] ERROR in job " + conf.id, content)
     } else if (!conf.errorOnly) {
       //result
-      sendMail("[Quartz] Finished job: " + conf.id, content)
+      sendMail("[Quartz Player] Finished job: " + conf.id, content)
     }
   }
 

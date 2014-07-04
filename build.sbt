@@ -1,4 +1,4 @@
-name := "play-with-quartz"
+name := "quartz-player"
 
 version := "dev"
 
